@@ -29,9 +29,19 @@ const App: React.FC = () => {
     error: null,
   });
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isKeyActive, setIsKeyActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Check initial key status
+    const checkKey = async () => {
+      if (window.aistudio?.hasSelectedApiKey) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setIsKeyActive(hasKey);
+      }
+    };
+    checkKey();
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -48,6 +58,14 @@ const App: React.FC = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.audits));
     }
   }, [state.audits]);
+
+  const handleKeySetup = async () => {
+    if (window.aistudio?.openSelectKey) {
+      await window.aistudio.openSelectKey();
+      setIsKeyActive(true);
+      setState(prev => ({ ...prev, error: null }));
+    }
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -188,6 +206,16 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4 lg:gap-6">
+            <button 
+              onClick={handleKeySetup}
+              className={`p-2 rounded-lg transition-all border ${
+                isKeyActive ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-amber-500/30 text-amber-500 bg-amber-500/10 animate-pulse'
+              }`}
+              title={isKeyActive ? "Environment Secured" : "API Key Required"}
+            >
+              <i className={`fa-solid ${isKeyActive ? 'fa-shield-halved' : 'fa-key'}`}></i>
+            </button>
+
             {state.audits.length > 0 && (
               <>
                 <button 
@@ -250,11 +278,20 @@ const App: React.FC = () => {
               </div>
 
               {state.error && (
-                <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-lg text-red-700 text-sm font-bold flex flex-col gap-2 shadow-sm">
+                <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-lg text-red-700 text-sm font-bold flex flex-col gap-3 shadow-sm">
                   <div className="flex gap-2">
                     <i className="fa-solid fa-warning mt-0.5"></i>
                     <span>{state.error}</span>
                   </div>
+                  {state.error.toLowerCase().includes("api key") && (
+                    <button 
+                      onClick={handleKeySetup}
+                      className="w-full py-2 bg-red-600 text-white rounded font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-2"
+                    >
+                      <i className="fa-solid fa-key"></i>
+                      Initialize Secure Key
+                    </button>
+                  )}
                 </div>
               )}
               
