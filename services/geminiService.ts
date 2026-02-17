@@ -15,12 +15,9 @@ export const analyzeCallAudio = async (
   mimeType: string,
   fileName: string
 ): Promise<CallAuditResult> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("API Key must be set when running in a browser environment. Please use the 'Initialize Secure Key' function.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Directly initialize using process.env.API_KEY as per system requirements.
+  // The injection of this variable is handled by the execution environment.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const agentCode = extractAgentCode(fileName);
 
   try {
@@ -55,7 +52,7 @@ Focus on:
 2. SURGICAL BEHAVIORAL ANALYSIS:
    - Empathy Index: Listening vs waiting to speak.
    - Dead Air: Timestamps of silences > 2 seconds.
-   - Rebuttal Quality: Usage of Empathize-Pivot-Ask framework. Folded early?
+   - Rebuttal Quality: Usage of Empathize-Pivot-Ask framework.
    - Pitch Energy: Professionalism level.
 
 3. FEEDBACK FIELDS:
@@ -115,15 +112,11 @@ Output strictly valid JSON.`,
       ...resultData,
     };
   } catch (error: any) {
-    console.error("QA Analysis Terminal Error:", error);
+    console.error("QA Analysis Error:", error);
     if (error.message?.toLowerCase().includes("quota") || error.status === 429) {
       throw new Error("Analysis Quota Exceeded. Please try again shortly.");
     }
-    // Forward the specific SDK error for key selection to the UI
-    if (error.message?.includes("API Key")) {
-      throw new Error("An API Key must be set when running in a browser environment.");
-    }
-    throw new Error(error.message || "Surgical analysis failed. Audio stream may be unreadable.");
+    throw new Error(error.message || "Surgical analysis failed. Check environment configuration and audio stream.");
   }
 };
 

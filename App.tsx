@@ -8,15 +8,11 @@ const STORAGE_KEY = 'voxaudit_pro_v3_final';
 // Accurate SVG reconstruction of the provided "Au" file logo
 const LogoAu = () => (
   <svg width="42" height="42" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Main document body */}
     <path d="M416 112V472C416 489.673 401.673 504 384 504H128C110.327 504 96 489.673 96 472V40C96 22.3269 110.327 8 128 8H312L416 112Z" fill="#000044" stroke="#8888FF" strokeWidth="12"/>
-    {/* Corner fold */}
     <path d="M416 112H312V8L416 112Z" fill="#8888FF" stroke="#8888FF" strokeWidth="4"/>
-    {/* Top lines */}
     <rect x="140" y="100" width="140" height="18" rx="9" fill="#8888FF"/>
     <rect x="140" y="145" width="230" height="18" rx="9" fill="#8888FF"/>
     <rect x="140" y="190" width="230" height="18" rx="9" fill="#8888FF"/>
-    {/* Central "Au" Banner */}
     <rect x="56" y="240" width="400" height="190" rx="40" fill="#000044" stroke="#8888FF" strokeWidth="12"/>
     <text x="50%" y="375" textAnchor="middle" fill="#8888FF" fontSize="165" fontWeight="900" style={{ fontFamily: 'Calibri, sans-serif' }}>Au</text>
   </svg>
@@ -49,13 +45,6 @@ const App: React.FC = () => {
     }
   }, [state.audits]);
 
-  const handleKeySetup = async () => {
-    if (window.aistudio?.openSelectKey) {
-      await window.aistudio.openSelectKey();
-      setState(prev => ({ ...prev, error: null }));
-    }
-  };
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -84,11 +73,6 @@ const App: React.FC = () => {
   };
 
   const handleDownloadPDF = () => {
-    if (state.audits.length === 0) {
-      alert("No audit records found to export.");
-      return;
-    }
-
     const { jsPDF } = (window as any).jspdf;
     const doc = new jsPDF();
     const margin = 15;
@@ -96,63 +80,16 @@ const App: React.FC = () => {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42);
     doc.text("CALL AUDIT REPORT: MASTER LOG", margin, y);
-    
-    y += 10;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, margin, y);
-    doc.text(`Total Records: ${state.audits.length}`, margin, y + 5);
-    
     y += 20;
 
     state.audits.forEach((audit, index) => {
-      if (y > 250) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.setFont("helvetica", "bold");
+      if (y > 250) { doc.addPage(); y = 20; }
       doc.setFontSize(12);
-      doc.setTextColor(79, 70, 229);
       doc.text(`AUDIT #${state.audits.length - index}: AGENT ${audit.agentCode}`, margin, y);
-      
-      y += 7;
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(51, 65, 85);
-      doc.text(`File: ${audit.fileName} | Duration: ${audit.duration} | Date: ${new Date(audit.timestamp).toLocaleDateString()}`, margin, y);
-      
-      y += 5;
-      doc.setFont("helvetica", "bold");
-      doc.text(`Agent Log: ${audit.recordedDisposition} | Verdict: ${audit.suggestedDisposition}`, margin, y);
-
-      y += 8;
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(9);
-      const summaryText = doc.splitTextToSize(`Summary: ${audit.summary}`, 180);
-      doc.text(summaryText, margin, y);
-      y += (summaryText.length * 5);
-
-      if (audit.failurePoints.length > 0) {
-        y += 2;
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(225, 29, 72);
-        doc.text("Behavioral Critiques:", margin, y);
-        y += 5;
-        doc.setFont("helvetica", "normal");
-        audit.failurePoints.forEach(point => {
-          const pointText = doc.splitTextToSize(`• ${point}`, 175);
-          doc.text(pointText, margin + 5, y);
-          y += (pointText.length * 5);
-        });
-      }
-
       y += 10;
-      doc.setDrawColor(226, 232, 240);
-      doc.line(margin, y, 210 - margin, y);
+      doc.setFontSize(10);
+      doc.text(`Verdict: ${audit.suggestedDisposition} | Duration: ${audit.duration}`, margin, y);
       y += 15;
     });
 
@@ -160,26 +97,9 @@ const App: React.FC = () => {
   };
 
   const clearEverything = () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      sessionStorage.removeItem(STORAGE_KEY);
-      const cookies = document.cookie.split(";");
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i];
-        const eqPos = cookie.indexOf("=");
-        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-        document.cookie = name.trim() + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-      }
-      setState({
-        audits: [],
-        isAnalyzing: false,
-        error: null,
-      });
-      setIsResetModalOpen(false);
-    } catch (error) {
-      console.error("Purge failure:", error);
-      alert("Failed to execute purge.");
-    }
+    localStorage.removeItem(STORAGE_KEY);
+    setState({ audits: [], isAnalyzing: false, error: null });
+    setIsResetModalOpen(false);
   };
 
   return (
@@ -223,7 +143,6 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-6 pt-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          
           <div className="lg:col-span-3">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 sticky top-24">
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
@@ -260,34 +179,18 @@ const App: React.FC = () => {
                 <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-lg text-red-700 text-sm font-bold flex flex-col gap-3 shadow-sm">
                   <div className="flex gap-2">
                     <i className="fa-solid fa-warning mt-0.5"></i>
-                    <span className="leading-tight">
-                      {state.error.includes("API Key") ? "Secure Analysis Environment Not Initialized." : state.error}
-                    </span>
+                    <span className="leading-tight">{state.error}</span>
                   </div>
-                  {state.error.toLowerCase().includes("api key") && window.aistudio && (
-                    <button 
-                      onClick={handleKeySetup}
-                      className="w-full py-2 bg-red-600 text-white rounded font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-2"
-                    >
-                      <i className="fa-solid fa-key"></i>
-                      Initialize Secure Key
-                    </button>
-                  )}
-                  {state.error.toLowerCase().includes("api key") && !window.aistudio && (
-                    <p className="text-[10px] text-red-600/70 italic uppercase tracking-tighter">
-                      Bridge not detected. Ensure environment variables are configured.
-                    </p>
-                  )}
+                  <p className="text-[10px] text-red-600/70 italic uppercase tracking-tighter">
+                    Ensure API_KEY is set in your environment variables.
+                  </p>
                 </div>
               )}
               
               <div className="mt-8 pt-8 border-t border-slate-100">
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-2">Instructions</p>
                 <p className="text-xs text-slate-500 leading-normal">
-                  Upload MP3/WAV files. Agent code (e.g., IN123) must be in the filename for tracking.
-                </p>
-                <p className="text-[9px] text-slate-400 mt-4 leading-tight">
-                  <i className="fa-solid fa-circle-info"></i> Using <strong className="text-indigo-400">gemini-3-flash-preview</strong>
+                  Upload audio recordings. Ensure agent codes (e.g., IN123) are in the filenames.
                 </p>
               </div>
             </div>
@@ -311,30 +214,14 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Purge Confirmation Modal */}
       {isResetModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/95 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-[#0f172a] rounded-2xl w-full max-w-sm p-10 text-center space-y-6 border border-red-500/30 shadow-2xl shadow-red-500/10">
-            <div className="w-16 h-16 bg-red-500/15 text-red-500 rounded-2xl flex items-center justify-center mx-auto text-3xl animate-pulse">⚡</div>
-            <div className="space-y-2">
-              <h3 className="font-black text-white uppercase italic text-[14px] tracking-widest">PURGE PROTOCOL</h3>
-              <p className="text-slate-500 text-[11px] leading-relaxed font-bold italic uppercase tracking-tighter">
-                Eradicate all vaulted audit intelligence?
-              </p>
-            </div>
+          <div className="bg-[#0f172a] rounded-2xl w-full max-w-sm p-10 text-center space-y-6 border border-red-500/30 shadow-2xl">
+            <h3 className="font-black text-white uppercase italic text-[14px] tracking-widest">PURGE PROTOCOL</h3>
+            <p className="text-slate-500 text-[11px] uppercase tracking-tighter">Eradicate all vaulted audit intelligence?</p>
             <div className="flex gap-4">
-              <button
-                onClick={() => setIsResetModalOpen(false)}
-                className="flex-1 px-5 py-2.5 bg-white/5 text-slate-400 font-black uppercase rounded-xl text-[10px] border border-white/5 transition-all hover:bg-white/10"
-              >
-                Abort
-              </button>
-              <button
-                onClick={clearEverything}
-                className="flex-1 px-5 py-2.5 bg-red-700 text-white font-black uppercase rounded-xl text-[10px] shadow-lg active:scale-95 transition-all hover:bg-red-600"
-              >
-                Execute
-              </button>
+              <button onClick={() => setIsResetModalOpen(false)} className="flex-1 px-5 py-2.5 bg-white/5 text-slate-400 font-black uppercase rounded-xl text-[10px]">Abort</button>
+              <button onClick={clearEverything} className="flex-1 px-5 py-2.5 bg-red-700 text-white font-black uppercase rounded-xl text-[10px]">Execute</button>
             </div>
           </div>
         </div>
