@@ -1,0 +1,7 @@
+{
+  "name": "CALL AUDITS - AI Behavioral Intelligence",
+  "description": "An intelligent call auditing platform that processes agent audio recordings to automatically determine dispositions, extract agent names, and summarize call outcomes using Gemini 3 Flash.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
