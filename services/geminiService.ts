@@ -15,7 +15,12 @@ export const analyzeCallAudio = async (
   mimeType: string,
   fileName: string
 ): Promise<CallAuditResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === "undefined") {
+    throw new Error("API Key must be set when running in a browser environment. Please use the 'Initialize Secure Key' function.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   const agentCode = extractAgentCode(fileName);
 
   try {
@@ -33,15 +38,16 @@ export const analyzeCallAudio = async (
             text: `AUDIT PROTOCOL: Agent Code: ${agentCode}. 
 You are an Elite Behavioral QA Director. Your analysis must be surgical, critical, and granular. 
 
-TERMINOLOGY RULE: 
-- NEVER use the term "Lead Generated" or "Lead". 
+TERMINOLOGY RULES (STRICT ADHERENCE REQUIRED): 
+- NEVER use the term "Lead Generated" or "Lead" in any field. 
 - Any positive outcome where a follow-up is required or interest is shown MUST be categorized as "CALLBACK".
-- "SALE" is only for definitive closes.
+- "SALE" is exclusively for definitive closed deals.
+- All non-sale interest-based outcomes = CALLBACK.
 
 Focus on:
 1. MANDATORY DISPOSITION CATEGORIZATION:
    - SALE: Only if definitive closing happens.
-   - CALLBACK: MANDATORY for any positive interest, appointment set, or follow-up requested. (Replaces 'Lead').
+   - CALLBACK: MANDATORY for any positive interest, appointment set, or follow-up requested. (REPLACES ALL LEAD TERMINOLOGY).
    - CNP (Customer Not Present): Answering machine, disconnect before greeting, or silence.
    - NI (Not Interested): Direct rejection.
    - CC (Call Cut): Hangup during pitch.
@@ -49,12 +55,12 @@ Focus on:
 2. SURGICAL BEHAVIORAL ANALYSIS:
    - Empathy Index: Listening vs waiting to speak.
    - Dead Air: Timestamps of silences > 2 seconds.
-   - Rebuttal Quality: Usage of Empathize-Pivot-Ask framework.
+   - Rebuttal Quality: Usage of Empathize-Pivot-Ask framework. Folded early?
    - Pitch Energy: Professionalism level.
 
-3. FEEDBACK:
-   - 'detailedNarrative': Turn-by-Turn breakdown [MM:SS].
-   - 'failurePoints': Specific skill critiques.
+3. FEEDBACK FIELDS:
+   - 'detailedNarrative': Turn-by-Turn breakdown with timestamps [MM:SS].
+   - 'failurePoints': Specific behavioral critiques.
 
 Output strictly valid JSON.`,
           },
@@ -111,7 +117,11 @@ Output strictly valid JSON.`,
   } catch (error: any) {
     console.error("QA Analysis Terminal Error:", error);
     if (error.message?.toLowerCase().includes("quota") || error.status === 429) {
-      throw new Error("Quota Exceeded. System limits reached. Please try again later.");
+      throw new Error("Analysis Quota Exceeded. Please try again shortly.");
+    }
+    // Forward the specific SDK error for key selection to the UI
+    if (error.message?.includes("API Key")) {
+      throw new Error("An API Key must be set when running in a browser environment.");
     }
     throw new Error(error.message || "Surgical analysis failed. Audio stream may be unreadable.");
   }

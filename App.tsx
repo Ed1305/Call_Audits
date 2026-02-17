@@ -29,19 +29,9 @@ const App: React.FC = () => {
     error: null,
   });
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [isKeyActive, setIsKeyActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Check initial key status
-    const checkKey = async () => {
-      if (window.aistudio?.hasSelectedApiKey) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setIsKeyActive(hasKey);
-      }
-    };
-    checkKey();
-
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -62,7 +52,6 @@ const App: React.FC = () => {
   const handleKeySetup = async () => {
     if (window.aistudio?.openSelectKey) {
       await window.aistudio.openSelectKey();
-      setIsKeyActive(true);
       setState(prev => ({ ...prev, error: null }));
     }
   };
@@ -83,11 +72,11 @@ const App: React.FC = () => {
         isAnalyzing: false
       }));
     } catch (err: any) {
-      console.error("Upload error:", err);
+      console.error("Audit failure:", err);
       setState(prev => ({
         ...prev,
         isAnalyzing: false,
-        error: err.message || "An unexpected error occurred."
+        error: err.message || "An unexpected error occurred during analysis."
       }));
     }
 
@@ -188,7 +177,7 @@ const App: React.FC = () => {
       });
       setIsResetModalOpen(false);
     } catch (error) {
-      console.error("Fatal error during purge:", error);
+      console.error("Purge failure:", error);
       alert("Failed to execute purge.");
     }
   };
@@ -206,16 +195,6 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4 lg:gap-6">
-            <button 
-              onClick={handleKeySetup}
-              className={`p-2 rounded-lg transition-all border ${
-                isKeyActive ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-amber-500/30 text-amber-500 bg-amber-500/10 animate-pulse'
-              }`}
-              title={isKeyActive ? "Environment Secured" : "API Key Required"}
-            >
-              <i className={`fa-solid ${isKeyActive ? 'fa-shield-halved' : 'fa-key'}`}></i>
-            </button>
-
             {state.audits.length > 0 && (
               <>
                 <button 
@@ -223,7 +202,7 @@ const App: React.FC = () => {
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-base font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm"
                 >
                   <i className="fa-solid fa-file-pdf"></i>
-                  Export
+                  Export PDF
                 </button>
                 <button
                   onClick={() => setIsResetModalOpen(true)}
@@ -281,9 +260,11 @@ const App: React.FC = () => {
                 <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-lg text-red-700 text-sm font-bold flex flex-col gap-3 shadow-sm">
                   <div className="flex gap-2">
                     <i className="fa-solid fa-warning mt-0.5"></i>
-                    <span>{state.error}</span>
+                    <span className="leading-tight">
+                      {state.error.includes("API Key") ? "Secure Analysis Environment Not Initialized." : state.error}
+                    </span>
                   </div>
-                  {state.error.toLowerCase().includes("api key") && (
+                  {state.error.toLowerCase().includes("api key") && window.aistudio && (
                     <button 
                       onClick={handleKeySetup}
                       className="w-full py-2 bg-red-600 text-white rounded font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-2"
@@ -292,16 +273,21 @@ const App: React.FC = () => {
                       Initialize Secure Key
                     </button>
                   )}
+                  {state.error.toLowerCase().includes("api key") && !window.aistudio && (
+                    <p className="text-[10px] text-red-600/70 italic uppercase tracking-tighter">
+                      Bridge not detected. Ensure environment variables are configured.
+                    </p>
+                  )}
                 </div>
               )}
               
               <div className="mt-8 pt-8 border-t border-slate-100">
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-2">Instructions</p>
                 <p className="text-xs text-slate-500 leading-normal">
-                  Upload MP3/WAV files. Ensure agent code (e.g., IN123) is in the filename.
+                  Upload MP3/WAV files. Agent code (e.g., IN123) must be in the filename for tracking.
                 </p>
                 <p className="text-[9px] text-slate-400 mt-4 leading-tight">
-                  <i className="fa-solid fa-circle-info"></i> Using <strong className="text-indigo-400">gemini-3-flash-preview</strong> for analysis.
+                  <i className="fa-solid fa-circle-info"></i> Using <strong className="text-indigo-400">gemini-3-flash-preview</strong>
                 </p>
               </div>
             </div>
